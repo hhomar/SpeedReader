@@ -1,0 +1,10 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+<item android:id="@+id/pasteItem" 
+		android:title="@string/pasteText"
+		android:icon="@android:drawable/ic_menu_set_as">
+</item>
+<item android:id="@+id/wpmItem" 
+		android:title="@string/wpm"
+		android:icon="@android:drawable/ic_menu_edit">
+</item>
+</menu>

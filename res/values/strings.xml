@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="play_button">Play</string>
+    <string name="app_name">SpeedReader</string>
+<string name="pasteText">Paste Text</string>
+<string name="wpm">WPM</string>
+<string name="begin_speed_reading">Press play to begin speed reading</string>
+<string name="wpm_set_at">has been set at</string>
+<string name="wpm_input">Input new value</string>
+
+</resources>
