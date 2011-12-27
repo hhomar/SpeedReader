@@ -2,13 +2,11 @@ package hhomar.speedreader;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.text.ClipboardManager;
-import android.text.Editable;
 import android.text.InputFilter;
 import android.text.InputType;
 import android.text.TextUtils;
@@ -25,6 +23,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 public class SpeedReader extends Activity {
+	private final String APP_KEY = "speed-reader";
+	private final String TAG = "SpeedReader";
+	
 	private TextView textView;
 	private SeekBar seekBar;
 	private ImageButton playButton;
@@ -38,14 +39,15 @@ public class SpeedReader extends Activity {
 	private boolean running = false;
 	
 	private Handler updateTextHandler = new Handler();
-	
-	private String debugText = "One baby to another says I'm lucky to have meet you " +
-								"I don't care what you think unless it is about me";
+
+//	private String debugText = "One baby to another says I'm lucky to have meet you " +
+//								"I don't care what you think unless it is about me";
 	
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
         setContentView(R.layout.main);
    
         clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
@@ -57,8 +59,16 @@ public class SpeedReader extends Activity {
         SharedPreferences settings = getPreferences(MODE_PRIVATE);
         wpm = settings.getInt("wpm", 300);
         
-        CheckClipboard();
-		//SetText(debugText);
+        if (savedInstanceState == null) {
+        	CheckClipboard();
+        	//SetText(debugText);
+        } else {
+        	Bundle map = savedInstanceState.getBundle(APP_KEY);
+        	if (map != null)
+        		RestoreState(map);
+        	else
+        		CheckClipboard();
+        }
 
         playButton.setOnClickListener(new View.OnClickListener() {
 			public void onClick(View v) {
@@ -69,9 +79,7 @@ public class SpeedReader extends Activity {
 					running = true;
 				}
 				else {
-			    	playButton.setImageResource(android.R.drawable.ic_media_play);
-			    	updateTextHandler.removeCallbacks(updateText);
-			    	running = false;
+					Pause();
 				}
 			}
 		});
@@ -79,9 +87,9 @@ public class SpeedReader extends Activity {
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
 			public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
 				if (fromUser) {
-					Log.i("SPEEDREADER", " Before: currPosition: " + currPosition + " progress: " + progress);
+					//Log.d(TAG, " Before: currPosition: " + currPosition + " progress: " + progress);
 					currPosition = progress;
-					Log.i("SPEEDREADER", " After : currPosition: " + currPosition + " progress: " + progress);
+					//Log.d(TAG, " After : currPosition: " + currPosition + " progress: " + progress);
 					textView.setText(splitText[currPosition]);
 				}
 			}
@@ -96,6 +104,22 @@ public class SpeedReader extends Activity {
 				
 			}
 		});
+    }
+    
+    @Override
+    protected void onPause()
+    {
+    	super.onPause();
+    	
+    	Pause();
+    }
+    
+    // From Emulator, test with Control-F11.
+    @Override
+    public void onSaveInstanceState(Bundle savedInstanceState)
+    {
+    	savedInstanceState.putBundle(APP_KEY, SaveState());
+    	super.onSaveInstanceState(savedInstanceState);
     }
     
     @Override
@@ -140,7 +164,7 @@ public class SpeedReader extends Activity {
             	});  	   
             	wpmDialog.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {  
             		   public void onClick(DialogInterface dialog, int whichButton) {  
-            		     // Canceled.  
+            		     // Cancelled.  
             		   }  
             	});  
             	wpmDialog.show();
@@ -153,15 +177,15 @@ public class SpeedReader extends Activity {
     private void CheckClipboard()
     {
     	String text = clipboard.getText().toString();
-    	if (text != "") {
-    		SetText(text);
+		SetText(text);
+    	if (!text.isEmpty()) {
     		Toast.makeText(this, R.string.begin_speed_reading, Toast.LENGTH_LONG).show();
     	}
     }
     
     private void SetWPM(String w)
     {
-    	if (w != "") {
+    	if (!w.isEmpty()) {
     		wpm = Integer.parseInt(w);
         	wordsPerSecond = wpm / 60;
     		String wpmMessage = getString(R.string.wpm) + " " + getString(R.string.wpm_set_at) + " " + wpm;
@@ -171,15 +195,49 @@ public class SpeedReader extends Activity {
     
     private void SetText(String text)
     {	
-    	splitText = text.split(" ");
-    	
+    	boolean hasText = !text.isEmpty();
+    
+    	splitText = text.split("\\s");
     	textLength = splitText.length;
     	wordsPerSecond = wpm / 60;
+		
     	seekBar.setMax(textLength);
-    	playButton.setClickable(true);
-    	seekBar.setClickable(true);
+    	playButton.setEnabled(hasText);
+    	seekBar.setEnabled(hasText);
     }
 
+    private void Pause()
+    {
+	    playButton.setImageResource(android.R.drawable.ic_media_play);
+	    updateTextHandler.removeCallbacks(updateText);
+	    running = false;
+    }
+    
+    private Bundle SaveState()
+    {
+    	Bundle map = new Bundle();
+    	
+    	map.putInt("wps", Integer.valueOf(wordsPerSecond));
+    	map.putInt("cp", Integer.valueOf(currPosition));
+    	map.putInt("tlen", Integer.valueOf(textLength));
+    	map.putStringArray("txt", splitText);
+    	
+    	Log.d(TAG, "SaveState");
+    	
+    	return map;
+    }
+    
+    private void RestoreState(Bundle map)
+    {
+    	wordsPerSecond = map.getInt("wps");
+    	currPosition = map.getInt("cp");
+    	textLength = map.getInt("tlen");
+    	splitText = map.getStringArray("txt");
+    	
+    	textView.setText(splitText[currPosition]);
+    	seekBar.setProgress(currPosition);
+    }
+    
     private Runnable updateText = new Runnable() {
     	public void run()
     	{
